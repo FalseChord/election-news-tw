@@ -94,8 +94,8 @@ class DataExtractor:
 
         return target_file_path
 
-if __name__ == '__main__':
-#def main():
+#if __name__ == '__main__':
+def main():
     RESUTL_DIR = "NC_Result"
 
     download_dir = os.path.join("NC_Origin")

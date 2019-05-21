@@ -61,7 +61,7 @@ class DataGen:
     def __init__(self, tokenized_dir: str, intermediates_dir: str, result_dir: str, indexes_dir: str):
         print("... init ...")
         self.__top_sources = [1,3,10,4,17,5,22,12,16,11,39,2,45,24,41,60,59,58,27,28,9,6,20,40,48,35,29,38,56,34]
-
+        self.__tokenized_dir = tokenized_dir
         self.__intermediates_dir = intermediates_dir
         self.__result_dir = result_dir
         self.__indexes_dir = indexes_dir
@@ -69,9 +69,6 @@ class DataGen:
         self.__keyword_mapping = {}
         self.__keyword_mapping_reverse = {}
         self.__k = {}
-
-        with open("./{}/all_news_keywords.json".format(self.__intermediates_dir), "r") as f:
-            self.__news_info = json.loads(f.read())
 
         with open("./{}/news_score.json".format(self.__intermediates_dir), "r") as f:
             self.__score = json.loads(f.read())
@@ -99,8 +96,14 @@ class DataGen:
                         self.__keyword_mapping[kid] = [km[keywords[kid]]]
                         self.__keyword_mapping_reverse[km[keywords[kid]]] = kid
 
-        with open('./{}/collectable_keywords_all.txt'.format(self.__intermediates_dir), 'r') as f:
-            self.__collectable_keywords = [x.strip() for x in list(f.readlines())]
+    def __set_rk(self, target, kws):
+        if not target in self.__k:
+            self.__k[target] = {}
+        for kw in kws:
+            if not kw in self.__keyword_mapping[target]:
+                if not self.__keyword_mapping_reverse[kw] in self.__k[target]:
+                    self.__k[target][self.__keyword_mapping_reverse[kw]] = 0
+                self.__k[target][self.__keyword_mapping_reverse[kw]] += 1
 
     def __trim_title(self, title):
         sep = ["｜", " | ", " :: ", " - ", " – ", " -- "]
@@ -116,46 +119,73 @@ class DataGen:
                 title = splited[0]
         return title.strip()
 
-    def __set_rk(self, target, kws):
-        if not target in self.__k:
-            self.__k[target] = {}
-        for kw in kws:
-            if not kw in self.__keyword_mapping[target] and kw in self.__collectable_keywords:
-                if not self.__keyword_mapping_reverse[kw] in self.__k[target]:
-                    self.__k[target][self.__keyword_mapping_reverse[kw]] = 0
-                self.__k[target][self.__keyword_mapping_reverse[kw]] += 1
-
     def execute(self):
         r = {}
+        # r : {
+        #     "keyword_id":{
+        #         "date"(xx/xx/xx): {
+        #             "total": {
+        #                 "newsCount": total news count
+        #                 "newsSentimentScore": average sentiment score for this keyword & date
+        #             },
+        #             "domain_id": {
+        #                 "newsCount": news count for this kw & date & domain
+        #                 "newsSentimentScore": average sentiment score for this kw & date & domain
+        #             }
+        #         }
+        #     }
+        # }
         t = {}
-        with open("./{}/result_formated.json".format(self.__intermediates_dir), "r") as f:
-            r = json.loads(f.read())
-            t = copy.deepcopy(r)
-            for kw in r:
-                self.__k[kw] = {}
-                for date in r[kw]:
-                    t[kw][date] = {}
+        # t : {
+        #     "keyword_id":{
+        #         "date"(xx/xx/xx): {
+        #             "domain_id": [{
+        #                 "t": title
+        #                 "s": average_score
+        #             }]
+        #         }
+        #     }
+        # }
+        for kw_id in list(self.__keyword_mapping.keys()):
+            r[kw_id] = {}
+            t[kw_id] = {}
+            self.__k[kw_id] = {}
+
+        for file_path in glob.glob('./{}/*-formated.json'.format(self.__intermediates_dir)):
+            date = self.__date_format(file_path)
+            with open(file_path, "r") as f:
+                formated = json.loads(f.read())
+
+                news_info = {}
+                with open("./{}/{}-keyword.json".format(self.__tokenized_dir, ''.join(date.split('/'))), "rb") as nf:
+                    news_info = json.loads(nf.read())
+
+                for kw_id in formated:
+                    r[kw_id][date] = {}
+                    t[kw_id][date] = {}
                     news_aggregated = {
                         "total": {"newsCount": 0, "newsSentimentScore": 0}
                     }
-                    for domain in r[kw][date]:
-                        source = self.__domains[domain]
-                        news_list = [x["i"] for x in r[kw][date][domain]]
+                    for domain in formated[kw_id]:
+                        source_id = self.__domains[domain]
+                        news_list = formated[kw_id][domain]
                         for news_id in news_list:
                             if news_id in self.__score:
                                 news_aggregated["total"]["newsCount"] += 1
                                 news_aggregated["total"]["newsSentimentScore"] += self.__score[news_id]["average_score"]    
 
-                                if int(source) in self.__top_sources:
-                                    if not source in news_aggregated:
-                                        news_aggregated[source] = {"newsCount": 0, "newsSentimentScore": 0}
-                                        t[kw][date][source] = []
-                                    title = self.__trim_title(self.__news_info[news_id]["title"])
-                                    if news_id in self.__score and title not in [x["t"] for x in t[kw][date][source]]:
-                                        news_aggregated[source]["newsCount"] += 1
-                                        news_aggregated[source]["newsSentimentScore"] += self.__score[news_id]["average_score"]
-                                        t[kw][date][source].append({"t": title, "s": self.__score[news_id]["average_score"]})
-                                        self.__set_rk(kw, self.__news_info[news_id]["keywords"])
+                                if int(source_id) in self.__top_sources:
+                                    if not source_id in news_aggregated:
+                                        news_aggregated[source_id] = {"newsCount": 0, "newsSentimentScore": 0}
+                                        t[kw_id][date][source_id] = []
+                                    if news_id in self.__score:
+                                        news_aggregated[source_id]["newsCount"] += 1
+                                        news_aggregated[source_id]["newsSentimentScore"] += self.__score[news_id]["average_score"]
+                                        t[kw_id][date][source_id].append({
+                                            "t": self.__trim_title(news_info[news_id]["title"]),
+                                            "s": self.__score[news_id]["average_score"]
+                                        })
+                                        self.__set_rk(kw_id, news_info[news_id]["keywords"])
 
                     for source_id in news_aggregated:
                         if news_aggregated[source_id]["newsCount"] == 0:
@@ -163,7 +193,7 @@ class DataGen:
                         else:
                             news_aggregated[source_id]["newsSentimentScore"] = round(news_aggregated[source_id]["newsSentimentScore"]/news_aggregated[source_id]["newsCount"],2)
 
-                    r[kw][date] = news_aggregated
+                    r[kw_id][date] = news_aggregated
 
         self.__write_to_graph(r)
         self.__write_to_newscontent(t)
@@ -180,6 +210,11 @@ class DataGen:
             for date in t[kw]:
                 with open("./{}/result_newscontent/{}-{}.json".format(self.__result_dir, "".join(date.split("/")), kw), "w") as wf:
                     wf.write(json.dumps(t[kw][date], ensure_ascii=False))
+
+    def __date_format(self, file_path):
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
+        date_string = file_name.split("-")[0]
+        return "{}/{}/{}".format(date_string[0:4], date_string[4:6], date_string[6:8])
 
 
 #if __name__ == '__main__':

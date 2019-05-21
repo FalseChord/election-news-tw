@@ -22,8 +22,8 @@ def post(payload):
 
 def main():
     NC_Downloader.main()
-    NC_Tokenizer.main()
-    NC_IndexFiles.main()
+    NC_Tokenizer.main() # NC_Tokenizer.main(True) for Keywords updated
+    NC_IndexFiles.main() # NC_IndexFiles.main(True) for Keywords updated
     NC_NLAPI.main()
     NC_ResultFiles.main()
 

@@ -2,6 +2,7 @@ import requests
 import asyncio
 import glob
 import json
+import os
 import six
 import time
 import sys
@@ -81,11 +82,10 @@ def main():
 
         date = file_path.split("-")[0].split("/")[-1]
         write_file_path = './{}/{}-sentiment.json'.format(API_RESULT_DIR, date)
-        if not os.path.isfile(write_file_path):
-
+        
         with open(file_path, 'rb') as f:
 
-            write_file = open(write_file_path, "w")
+            write_file = open(write_file_path, "a+")
 
             news_list = [json.loads(x.decode('utf-8')) for x in f.readlines()]
             while len(news_list) > 0:
@@ -111,5 +111,5 @@ def main():
                 tasks = [asyncio.ensure_future(request(x["article_id"], "{} \n {}".format(x["title"], x["content_text"]), req_token, write_file)) for x in req_list]
                 print('start calling NLAPI for req file {}'.format(file_path))
                 loop.run_until_complete(asyncio.wait(tasks))
-
+        os.remove(file_path)
     loop.close()
