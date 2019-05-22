@@ -157,7 +157,7 @@ class DataGen:
                 formated = json.loads(f.read())
 
                 news_info = {}
-                with open("./{}/{}-keyword.json".format(self.__tokenized_dir, ''.join(date.split('/'))), "rb") as nf:
+                with open("./{}/{}-keyword.json".format(self.__tokenized_dir, ''.join(date.split('/'))), "r") as nf:
                     news_info = json.loads(nf.read())
 
                 for kw_id in formated:

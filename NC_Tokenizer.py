@@ -105,7 +105,7 @@ class KeywordExtractor:
 
         self.__domain_string = re.compile(r'^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\?\/\n]+)',re.I)
         self.__domain_list = {}
-        with open('./{}/news_domain_list.json'.format(index_dir), 'rb') as f:
+        with open('./{}/news_domain_list.json'.format(index_dir), 'r') as f:
             self.__domain_list = json.loads(f.read())
 
     def execute(self):

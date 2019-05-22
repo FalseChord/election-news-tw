@@ -56,7 +56,7 @@ class ResultFormatter():
                 result = {}
                 news_id_list = {}
                 titles = {}
-                with open(file_path, 'rb') as f:
+                with open(file_path, 'r') as f:
                     all_news_keywords = json.loads(f.read())
                     for news_id in all_news_keywords:
                         domain = all_news_keywords[news_id]["domain"]
@@ -113,6 +113,7 @@ class ResultFormatter():
 # 產生呼叫情緒分數所需之新聞資料，只產生沒分析過的日數 (以 API_RESULT_DIR 含有的檔案名稱判斷)
 class APIReqGen():
     def __init__(self, tokenized_dir: str, api_req_dir: str, api_result_dir: str, intermediate_dir: str, REDO: bool):
+        self.__REDO = REDO
         self.__tokenized_dir = tokenized_dir
         self.__api_req_dir = api_req_dir
         self.__api_res_dir = api_result_dir
@@ -122,20 +123,20 @@ class APIReqGen():
 
     def execute(self):
         for date in self.__collected_dates:
-            if not date in self.__analysed_dates or REDO:
+            if not date in self.__analysed_dates or self.__REDO:
                 collectable_id_list = []
                 sentiment_id_list = []
                 with open('./{}/{}-patch.json'.format(self.__api_req_dir, date), 'w') as fw:
-                    with open('./{}/{}-newsids.json'.format(self.__intermediate_dir, date), 'rb') as f:
+                    with open('./{}/{}-newsids.json'.format(self.__intermediate_dir, date), 'r') as f:
                         collectable_id_list = json.loads(f.read()).keys()
 
                     if has_NLAPI_result(self.__api_res_dir, date):
-                        with open('./{}/{}-sentiment.json'.format(self.__api_res_dir, date), 'rb') as f:
+                        with open('./{}/{}-sentiment.json'.format(self.__api_res_dir, date), 'r') as f:
                             sentiment_id_list = [json.loads(x)["article_id"] for x in f.readlines()]
 
                     news_id_list = list(set(collectable_id_list) - set(sentiment_id_list))
                     news_info = {}
-                    with open('./{}/{}-keyword.json'.format(self.__tokenized_dir, date), 'rb') as f:
+                    with open('./{}/{}-keyword.json'.format(self.__tokenized_dir, date), 'r') as f:
                         news_info = json.loads(f.read())
 
                     for news_id in news_id_list:
