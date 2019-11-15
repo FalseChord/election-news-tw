@@ -113,8 +113,8 @@ class DataGen:
                 title = splited[2]
             elif s == " - " and splited[0].strip() == "自立晚報":
                 title = splited[1]
-            elif s == "｜" and splited[0].strip() == "放言Fount Media":
-                title = splited[1]
+            #elif s == "｜" and splited[0].strip() == "放言Fount Media":
+                #title = splited[1]
             else:
                 title = splited[0]
         return title.strip()
